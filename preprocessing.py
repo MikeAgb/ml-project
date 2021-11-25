@@ -31,15 +31,31 @@ def preprocess_captions(captions, max_length=22):
                 preprocessed_captions[image_id].append(caption)
     return preprocessed_captions
 
-def create_vocabulary(tokenized_captions):
+def create_vocabulary(tokenized_captions, min_freq=5):
     all_tokens = []
     for image_id in tokenized_captions:
         for caption in tokenized_captions[image_id]:
             all_tokens += caption
-    vocab = build_vocab_from_iterator([all_tokens], min_freq=1, specials=["<unk>", "<null>"])
+    vocab = build_vocab_from_iterator([all_tokens], specials=["<unk>", "<null>"], min_freq=min_freq)
     vocab.set_default_index(vocab["<unk>"])
     return vocab
 
 def rebuild_sentence(model_output, vocabulary):
-    return " ".join(vocabulary.lookup_tokens(model_output.tolist()))
+    sentence = ""
+    for token in vocabulary.lookup_tokens(model_output.tolist()):
+        if token == "<start>" or token == "<null>":
+            continue
+        if token == "<end>":
+            break
+        sentence += token + " "
+
+    return sentence[:-1] + "."
+
+if __name__ == "__main__":
+    import os
+    train_captions = load_captions(os.path.join("dataset", "annotations", "annotations", "captions_train2017.json"))
+    train_pre_captions = preprocess_captions(train_captions, 22)
+    vocab = create_vocabulary(train_pre_captions, min_freq=15)
+
+    print(len(vocab))
 

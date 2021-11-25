@@ -1,0 +1,7 @@
+Reduce vocab size
+Remove bias
+Weights in loss
+Mask out padding
+
+make gradient smaller?
+somehow the LSTM is forgetting the context after a couple of words

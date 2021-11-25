@@ -7,8 +7,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor, Resize, CenterCrop
 
-import datetime as dt
-
 import preprocessing
 
 IMAGE_WIDTH = 224
@@ -65,9 +63,9 @@ class CaptionDataset(Dataset):
 
 
 class EncodedDataset(Dataset):
-    def __init__(self, vocab, captions, max_caption_length, train_val_test="train", fc_mp="fc", captions_per_image=5) -> None:
+    def __init__(self, vocab, captions, max_caption_length, train_val_test="train", fc_mp="fc", google=True, captions_per_image=5) -> None:
         super(Dataset, self).__init__()
-        self.folder = os.path.join("dataset", "features", train_val_test, fc_mp)
+        self.folder = os.path.join("dataset", "features_google" if google else "features", train_val_test, fc_mp)
         self.images = [image_id for image_id in captions if len(captions[image_id]) >= captions_per_image]
         self.max_caption_length = max_caption_length
         self.captions = captions
@@ -106,16 +104,9 @@ if __name__ == "__main__":
     pre_captions = preprocessing.preprocess_captions(captions, 22)
     vocab = preprocessing.create_vocabulary(pre_captions)
 
-    train_ds = EncodedDataset(vocab, pre_captions, 22, fc_mp="fc", captions_per_image=1)
+    train_ds = EncodedDataset(vocab, pre_captions, 22, fc_mp="mp", captions_per_image=1)
     print(len(train_ds))
 
     im, l = train_ds[0]
     print(im.shape)
     print(l.shape)
-
-    # Test time it takes to load everything
-    # loader = DataLoader(train_ds, 32)
-    # t = dt.datetime.now()
-    # for im, l in loader:
-    #     ...
-    # print(dt.datetime.now()-t)

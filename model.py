@@ -1,6 +1,7 @@
 
 import torch
 from torch.nn import Module, CrossEntropyLoss
+from torch.optim.lr_scheduler import ExponentialLR
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -20,6 +21,7 @@ def compute_loss(output, labels, criterion):
     return criterion(output.view(-1, output.shape[-1]), labels.view(-1))
 
 def train_one_batch(data, model, optimizer, criterion, captions_per_image):
+    model.train(True)
     X, captions = data  # captions is [batch size, captions_per_image, caption_length]
     optimizer.zero_grad()
 
@@ -32,11 +34,13 @@ def train_one_batch(data, model, optimizer, criterion, captions_per_image):
     loss = compute_loss(output_captions, captions, criterion)
     loss.backward()
     optimizer.step()
+    model.train(False)
 
     return loss
 
-def train_one_epoch(dataloader, model, optimizer, criterion, captions_per_image, batch_size):
+def train_one_epoch(dataloader, model, optimizer, criterion, captions_per_image):
     losses = []
+    
     
     for data in tqdm(dataloader, leave=False):
         loss = train_one_batch(data, model, optimizer, criterion, captions_per_image)
@@ -53,17 +57,19 @@ def compute_val_loss(dataloader, model, criterion, captions_per_image):
         losses.append(loss)
     return sum(losses) / len(losses)
 
-def train(train_ds, val_ds, model, captions_per_image=5, num_epochs=10, batch_size=32, lr=0.01):
+def train(train_ds, val_ds, model, captions_per_image=5, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.05):
     optimizer = Adam(model.parameters(), lr=lr)
     # weights = torch.ones(len(model.decoder.vocab), dtype=torch.float)
     # weights[model.decoder.vocab["<null>"]] = 0.01
     criterion = CrossEntropyLoss()
 
     ds_len = len(train_ds)
-    idx = torch.multinomial(torch.ones(ds_len, dtype=torch.float) / ds_len, ds_len // 100)
-    dataloader = DataLoader(train_ds, batch_size=1, sampler=SubsetRandomSampler(torch.ones(1, dtype=torch.long)))
+    idx = torch.multinomial(torch.ones(ds_len, dtype=torch.float) / ds_len, int(ds_len * epoch_perc))
+    dataloader = DataLoader(train_ds, batch_size=batch_size, sampler=SubsetRandomSampler(idx))
+    scheduler = ExponentialLR(optimizer, 0.9)
     val_loader = DataLoader(val_ds, batch_size=batch_size)
     for i in range(num_epochs):
-        avg_train_loss = train_one_epoch(dataloader, model, optimizer, criterion, captions_per_image, batch_size)
+        avg_train_loss = train_one_epoch(dataloader, model, optimizer, criterion, captions_per_image)
         #avg_val_loss = compute_val_loss(val_loader, model, criterion, captions_per_image)
         print("Epoch {} - Train loss = {:.2f}".format(i + 1, avg_train_loss))
+        scheduler.step()

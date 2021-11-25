@@ -42,7 +42,7 @@ class BasicDecoder(Module):
             previous_output_word = torch.argmax(output[:, i - 1, :], dim=-1)
             previous_embedded = self.word_embedding(previous_output_word)
             hidden_state, cell_state = self.lstm_cell(previous_embedded, (hidden_state, cell_state))
-            output[:, i, :] = F.softmax(self.linear_out(hidden_state), dim=-1)
+            output[:, i, :] = F.log_softmax(self.linear_out(hidden_state), dim=-1)
 
             # If a sequence already has a <end> token, then overwrite output with <null>
             # output[sequences_ended, i, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
