@@ -35,22 +35,22 @@ class BasicDecoder(Module):
         # Start the sequence with the <start> token
         output[:, 0] = F.one_hot(torch.tensor(self.vocab["<start>"]), self.vocab_size)
 
-        sequences_ended = torch.tensor([False] * batch_size, dtype=torch.bool)
+        # sequences_ended = torch.tensor([False] * batch_size, dtype=torch.bool)
 
         # Add words to the sequence one by one
-        for i in range(1, self.caption_length - 1):
+        for i in range(1, self.caption_length):
             previous_output_word = torch.argmax(output[:, i - 1, :], dim=-1)
             previous_embedded = self.word_embedding(previous_output_word)
             hidden_state, cell_state = self.lstm_cell(previous_embedded, (hidden_state, cell_state))
             output[:, i, :] = F.softmax(self.linear_out(hidden_state), dim=-1)
 
             # If a sequence already has a <end> token, then overwrite output with <null>
-            output[sequences_ended, i, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
-            sequences_ended = torch.logical_and(sequences_ended, torch.argmax(output[:, i, :], dim=-1) == self.vocab["<end>"])
+            # output[sequences_ended, i, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
+            # sequences_ended = torch.logical_and(sequences_ended, torch.argmax(output[:, i, :], dim=-1) == self.vocab["<end>"])
 
         # End each sequence with a <end> token if it did already end
-        output[sequences_ended, self.caption_length - 1, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
-        output[torch.logical_not(sequences_ended), self.caption_length - 1, :] = F.one_hot(torch.tensor(self.vocab["<end>"]), self.vocab_size).float()
+        # output[sequences_ended, self.caption_length - 1, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
+        # output[torch.logical_not(sequences_ended), self.caption_length - 1, :] = F.one_hot(torch.tensor(self.vocab["<end>"]), self.vocab_size).float()
 
         return output
 

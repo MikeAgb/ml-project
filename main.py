@@ -31,6 +31,6 @@ if __name__ == "__main__":
 
     model.train(train_ds, val_ds, captionning_model, num_epochs=10, batch_size=64, lr=0.1, captions_per_image=CAPTIONS_PER_IMAGE)
 
-    torch.save(encoder_model, "baseline_encoder.pt")
-    torch.save(decoder_model, "baseline_decoder.pt")
-    torch.save(captionning_model, "baseline_model.pt")
+    torch.save(encoder_model, "baseline_encoder_1s.pt")
+    torch.save(decoder_model, "baseline_decoder_1s.pt")
+    torch.save(captionning_model, "baseline_model_1s.pt")
