@@ -43,10 +43,10 @@ def create_vocabulary(tokenized_captions, min_freq=5):
 def rebuild_sentence(model_output, vocabulary):
     sentence = ""
     for token in vocabulary.lookup_tokens(model_output.tolist()):
-        # if token == "<start>" or token == "<null>":
-        #     continue
-        # if token == "<end>":
-        #     break
+        if token == "<start>" or token == "<null>":
+            continue
+        if token == "<end>":
+            break
         sentence += token + " "
 
     return sentence[:-1] + "."
