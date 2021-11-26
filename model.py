@@ -1,3 +1,4 @@
+import os
 
 import torch
 from torch.nn import Module, CrossEntropyLoss
@@ -20,22 +21,26 @@ class CaptionningModel(Module):
         encoding = self.encoder(pretrained_encoding)
         return self.decoder(encoding)
 
-def compute_loss(output, labels, criterion):
-    return criterion(output.view(-1, output.shape[-1]), labels.view(-1))
-
 def train_one_batch(data, model, optimizer, criterion):
     model.train(True)
     X, captions = data  # captions is [batch size, caption_length]
+
     optimizer.zero_grad()
 
+    X = model.encoder(X)
+
+    total_loss = 0
     # Make predictions
-    output_captions = model(X)  # that has shape [batch size, caption_length, vocab_size]
-    # if captions_per_image > 1:
-    #     output_captions = output_captions.unsqueeze(1).repeat(1, captions_per_image, 1, 1)  # Duplicate the output to do loss on multiple captions at once
+
+    _, hidden_state, cell_state = model.decoder(X, None, None)
+    for i in range(1, model.decoder.caption_length):
+        features_input = model.decoder.embedding(captions[:, i-1])  # Use label for teacher forcing
+        output, hidden_state, cell_state = model.decoder(features_input, hidden_state, cell_state)
+        loss = criterion(output, captions[:, i])
+        total_loss += loss
 
     # Compute loss
-    loss = compute_loss(output_captions, captions, criterion)
-    loss.backward()
+    total_loss.backward()
     optimizer.step()
     model.train(False)
 
@@ -47,16 +52,6 @@ def train_one_epoch(dataloader, model, optimizer, criterion):
     for data in tqdm(dataloader, leave=False):
         loss = train_one_batch(data, model, optimizer, criterion)
         losses.append(loss.item())
-    return sum(losses) / len(losses)
-
-def compute_val_loss(dataloader, model, criterion):
-    losses = []
-    for X, y in tqdm(dataloader, leave=False):
-        y_pred = model(X)
-        # if captions_per_image > 1:
-        #     y_pred = y_pred.unsqueeze(1).repeat(1, captions_per_image, 1, 1)
-        loss = compute_loss(y_pred, y, criterion).item()
-        losses.append(loss)
     return sum(losses) / len(losses)
 
 def train(train_ds, val_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.05):
@@ -84,14 +79,27 @@ def train(train_ds, val_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_
     criterion = CrossEntropyLoss()
 
     # scheduler = ExponentialLR(optimizer, 0.8)
-    val_loader = DataLoader(val_ds, batch_size=batch_size)
-    im, l = train_ds[idx[0]]
-    print(train_ds.indices[idx[0]][0])
-    print(preprocessing.rebuild_sentence(l, model.decoder.vocab))
+    # im, l = train_ds[idx[0]]
+    # print(train_ds.indices[idx[0]][0])
+    # print(preprocessing.rebuild_sentence(l, model.decoder.vocab))
     for i in range(num_epochs):
         avg_train_loss = train_one_epoch(dataloader, model, optimizer, criterion)
-        #avg_val_loss = compute_val_loss(val_loader, model, criterion)
+        torch.save(model, os.path.join("checkpoints", "check{}.pt".format(i+1)))
         print("Epoch {} - Train loss = {:.2f}".format(i + 1, avg_train_loss))
-        print(preprocessing.rebuild_sentence(torch.argmax(model(im.unsqueeze(0))[0],-1), model.decoder.vocab))
+        # print(preprocessing.rebuild_sentence(torch.argmax(model(im.unsqueeze(0))[0],-1), model.decoder.vocab))
         # scheduler.step()
 
+def inference(model, X):
+    X = model.encoder(X)
+    batch_size = X.shape[0]
+
+    _, hidden_state, cell_state = model.decoder(X, None, None)
+
+    output = torch.zeros((batch_size, model.decoder.caption_length), dtype=torch.long)
+    output[:, 0] = model.decoder.vocab["<start>"]
+
+    for i in range(1, model.decoder.caption_length):
+        features_input = model.decoder.embedding(output[:, i-1])  # Use label for teacher forcing
+        output_prob, hidden_state, cell_state = model.decoder(features_input, hidden_state, cell_state)
+        output[:, i] = torch.argmax(output_prob, dim=-1)
+    return output

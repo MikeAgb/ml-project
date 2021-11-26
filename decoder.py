@@ -18,52 +18,22 @@ class BasicDecoder(Module):
         self.caption_length = caption_length
         self.dropout = Dropout(0.25)
 
-        self.word_embedding = Embedding(self.vocab_size, embedding_size)
-        self.lstm_cell = LSTMCell(embedding_size * 2, hidden_size)
-        self.lstm_cell_2 = LSTMCell(hidden_size, hidden_size)
-
+        self.embedding = Embedding(self.vocab_size, embedding_size)
+        self.lstm_cell = LSTMCell(embedding_size, hidden_size)
         self.linear_out = Linear(hidden_size, self.vocab_size)
 
-    def forward(self, encoded_image):
+    def forward(self, features, hidden_state, cell_state):
+        batch_size = features.shape[0]
+        
+        if hidden_state is None:
+            hidden_state = torch.zeros((batch_size, self.hidden_size))
+        if cell_state is None:
+            cell_state = torch.zeros((batch_size, self.hidden_size))
 
-        batch_size = encoded_image.shape[0]
-        output = torch.zeros((batch_size, self.caption_length, self.vocab_size))
+        hidden_state, cell_state = self.lstm_cell(features, (hidden_state, cell_state))
 
-        # Give the encoded image as input to the LSTM cell with hidden state and cell state initialized as 0
-        hidden_state = torch.zeros((batch_size, self.hidden_size))
-        cell_state = torch.zeros((batch_size, self.hidden_size))
-        hidden_state_2 = torch.zeros((batch_size, self.hidden_size))
-        cell_state_2 = torch.zeros((batch_size, self.hidden_size))
-
-        cell_input = torch.cat((encoded_image, torch.zeros(batch_size, self.embedding_size)), dim=-1)
-        hidden_state, cell_state = self.lstm_cell(cell_input, (hidden_state, cell_state))
-        hidden_state_2, cell_state_2 = self.lstm_cell_2(hidden_state, (hidden_state_2, cell_state_2))
-
-        # Start the sequence with the <start> token
-        output[:, 0] = F.one_hot(torch.tensor(self.vocab["<start>"]), self.vocab_size)
-
-        # sequences_ended = torch.tensor([False] * batch_size, dtype=torch.bool)
-
-        # Add words to the sequence one by one
-        for i in range(1, self.caption_length):
-            previous_output_word = torch.argmax(output[:, i - 1, :], dim=-1)
-            previous_embedded = self.word_embedding(previous_output_word)
-            cell_input = torch.cat((encoded_image, previous_embedded), dim=-1)
-            hidden_state, cell_state = self.lstm_cell(cell_input, (hidden_state, cell_state))
-            dropout_hidden = self.dropout(hidden_state)
-            hidden_state_2, cell_state_2 = self.lstm_cell_2(dropout_hidden, (hidden_state_2, cell_state_2))
-            dropout_hidden_2 = self.dropout(hidden_state_2)
-            output[:, i, :] = F.log_softmax(self.linear_out(dropout_hidden_2), dim=-1)
-
-            # If a sequence already has a <end> token, then overwrite output with <null>
-            # output[sequences_ended, i, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
-            # sequences_ended = torch.logical_and(sequences_ended, torch.argmax(output[:, i, :], dim=-1) == self.vocab["<end>"])
-
-        # End each sequence with a <end> token if it did already end
-        # output[sequences_ended, self.caption_length - 1, :] = F.one_hot(torch.tensor(self.vocab["<null>"]), self.vocab_size).float()
-        # output[torch.logical_not(sequences_ended), self.caption_length - 1, :] = F.one_hot(torch.tensor(self.vocab["<end>"]), self.vocab_size).float()
-
-        return output
+        output = torch.log_softmax(self.linear_out(self.dropout(hidden_state)), dim=-1)
+        return output, hidden_state, cell_state
 
 class AttentionModel(Module):
     def __init__(self, input_size, hidden_size) -> None:
