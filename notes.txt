@@ -5,3 +5,7 @@ Mask out padding
 
 make gradient smaller?
 somehow the LSTM is forgetting the context after a couple of words
+
+weighting
+adding a second LSTM layer
+dropout

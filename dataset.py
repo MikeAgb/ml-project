@@ -63,17 +63,20 @@ class CaptionDataset(Dataset):
 
 
 class EncodedDataset(Dataset):
-    def __init__(self, vocab, captions, max_caption_length, train_val_test="train", fc_mp="fc", google=True, captions_per_image=5) -> None:
+    def __init__(self, vocab, captions, max_caption_length, train_val_test="train", fc_mp="fc", google=True) -> None:
         super(Dataset, self).__init__()
         self.folder = os.path.join("dataset", "features_google" if google else "features", train_val_test, fc_mp)
-        self.images = [image_id for image_id in captions if len(captions[image_id]) >= captions_per_image]
+        # self.images = [image_id for image_id in captions if len(captions[image_id]) >= captions_per_image]
+        self.indices = [(image_id, caption_id)
+                        for image_id in captions
+                        for caption_id in range(len(captions[image_id]))]
         self.max_caption_length = max_caption_length
         self.captions = captions
-        self.captions_per_image = captions_per_image
+        # self.captions_per_image = captions_per_image
         self.vocab = vocab
     
     def __len__(self):
-        return len(self.images)
+        return len(self.indices)
 
     @lru_cache(maxsize=None)
     def _get_image(self, image_id):
@@ -83,19 +86,19 @@ class EncodedDataset(Dataset):
         return image_tensor.squeeze()
 
     @lru_cache(maxsize=None)
-    def _get_captions(self, image_id):
-        labels = torch.zeros((self.captions_per_image, self.max_caption_length), dtype=torch.long)
+    def _get_captions(self, image_id, caption_id):
+        # labels = torch.zeros(self.max_caption_length, dtype=torch.long)
 
-        for i in range(self.captions_per_image):
-            caption = self.captions[image_id][i]
-            caption += ["<null>"] * (self.max_caption_length - len(caption))
-            labels[i, :] = torch.tensor(self.vocab.lookup_indices(caption))
+        # for i in range(self.captions_per_image):
+        caption = self.captions[image_id][caption_id]
+        caption += ["<null>"] * (self.max_caption_length - len(caption))
+        labels = torch.tensor(self.vocab.lookup_indices(caption), dtype=torch.long)
         return labels
 
     def __getitem__(self, index):
-        image_id = self.images[index]
+        image_id, caption_id = self.indices[index]
         image_tensor = self._get_image(image_id)
-        labels = self._get_captions(image_id)
+        labels = self._get_captions(image_id, caption_id)
         
         return image_tensor, labels
 

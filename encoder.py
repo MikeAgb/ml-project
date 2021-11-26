@@ -27,3 +27,14 @@ class EncodeFromCNNLayer(Module):
         X = F.relu(self.lin_1(X))
         X = F.relu(self.lin_2(X))
         return F.relu(self.lin_3(X))
+
+class EncodeForAttention(Module):
+    def __init__(self, in_size, out_size) -> None:
+        super(EncodeForAttention, self).__init__()
+        self.lin = Linear(in_size, out_size)
+
+    def forward(self, X):
+        # X is [batch_size, channels, h, w]:
+        X = torch.flatten(X, start_dim=2)  # [batch_size, channels, h*w]
+        X = torch.permute(X, (0, 2, 1))  # [batch_size, h*w, channels]
+        return self.lin(X)
