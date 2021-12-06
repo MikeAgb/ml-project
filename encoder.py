@@ -14,20 +14,6 @@ class LinearDimensionalityReduction(Module):
     def forward(self, pretrained_encoding):
         return self.dropout(self.linear(pretrained_encoding))
 
-class EncodeFromCNNLayer(Module):
-    def __init__(self, output_size=256) -> None:
-        super(EncodeFromCNNLayer, self).__init__()
-        self.flatten = Flatten()
-        self.lin_1 = Linear(7 * 7 * 512, 2048)
-        self.lin_2 = Linear(2048, 1024)
-        self.lin_3 = Linear(1024, output_size)
-
-    def forward(self, X):
-        X = self.flatten(X)
-        X = F.relu(self.lin_1(X))
-        X = F.relu(self.lin_2(X))
-        return F.relu(self.lin_3(X))
-
 class EncodeForAttention(Module):
     def __init__(self, in_size, out_size) -> None:
         super(EncodeForAttention, self).__init__()

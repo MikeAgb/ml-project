@@ -55,7 +55,19 @@ if __name__ == "__main__":
     import os
     train_captions = load_captions(os.path.join("dataset", "annotations", "annotations", "captions_train2017.json"))
     train_pre_captions = preprocess_captions(train_captions, 22)
-    vocab = create_vocabulary(train_pre_captions, min_freq=15)
+    vocab_full = create_vocabulary(train_pre_captions, min_freq=1)
+    vocab = create_vocabulary(train_pre_captions, min_freq=20)
 
-    print(len(vocab))
+    full_vocab = vocab_full.get_stoi()
+    small_vocab = vocab.get_stoi()
+
+    count = 0
+    for token in full_vocab:
+        if token not in small_vocab:
+            print(token)
+            count += 1
+            if count == 100:
+                break
+
+    # print(len(vocab))
 
