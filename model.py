@@ -13,6 +13,8 @@ from tqdm import tqdm
 import preprocessing
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DO_CURRICULUM = True
+CURRICULUM = [1, 1, 1, 1, 1, 0.9, 0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7, 0.7, 0.7]
 
 class CaptionningModel(Module):
     def __init__(self, encoder, decoder) -> None:
@@ -73,16 +75,18 @@ def train_one_batch_attention(data, model, optimizer, criterion, teacher_forcing
     model.train(False)
     return total_loss / (model.decoder.caption_length - 1)
 
-def train_one_epoch(dataloader, model, optimizer, criterion):
-    losses = []  
+def train_one_epoch(dataloader, model, optimizer, criterion, epoch_num=0):
+    losses = []
     
     for data in tqdm(dataloader, leave=False):
         # loss = train_one_batch(data, model, optimizer, criterion)
-        loss = train_one_batch_attention(data, model, optimizer, criterion)
+        loss = train_one_batch_attention(data, model, optimizer, criterion, teacher_forcing_prob=1 if not DO_CURRICULUM else CURRICULUM[epoch_num])
         losses.append(loss.item())
     return sum(losses) / len(losses)
 
 def train(train_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.05):
+    if DO_CURRICULUM and len(CURRICULUM) != num_epochs:
+        raise ValueError()
     optimizer = Adam(model.parameters(), lr=lr)
     # weights = torch.ones(len(model.decoder.vocab), dtype=torch.float)
     # weights[model.decoder.vocab["<null>"]] = 0.01
@@ -104,7 +108,7 @@ def train(train_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.0
     print(preprocessing.rebuild_sentence(l, model.decoder.vocab))
     train_loss = torch.zeros(num_epochs)
     for i in range(num_epochs):
-        train_loss[i] = train_one_epoch(dataloader, model, optimizer, criterion)
+        train_loss[i] = train_one_epoch(dataloader, model, optimizer, criterion, epoch_num=i)
 
         torch.save(model, os.path.join("checkpoints", "check_att{}.pt".format(i+1)))
         print("Epoch {} - Train loss = {:.2f}".format(i + 1, train_loss[i]))
@@ -138,7 +142,7 @@ def inference_attention(model, X, return_weights=False):
     hidden_state, cell_state = None, None
     for i in range(1, model.decoder.caption_length):
         output_prob, attention_weights, hidden_state, cell_state = model.decoder(annotations, output[:, i-1], hidden_state, cell_state)
-        all_attention_weights[:, i, :] = attention_weights.item()
+        all_attention_weights[:, i, :] = attention_weights
         output[:, i] = torch.argmax(output_prob, dim=-1)
     if return_weights:
         return output, all_attention_weights
