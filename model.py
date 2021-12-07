@@ -133,7 +133,7 @@ def inference_attention(model, X, return_weights=False):
     hidden_state, cell_state = None, None
     for i in range(1, model.decoder.caption_length):
         output_prob, attention_weights, hidden_state, cell_state = model.decoder(annotations, output[:, i-1], hidden_state, cell_state)
-        all_attention_weights[:, i, :] = attention_weights
+        all_attention_weights[:, i, :] = attention_weights.view(batch_size, -1)
         output[:, i] = torch.argmax(output_prob, dim=-1)
     if return_weights:
         return output, all_attention_weights
