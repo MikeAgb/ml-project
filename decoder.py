@@ -44,14 +44,16 @@ class AttentionModel(Module):
         self.dropout = Dropout(0.25)
 
     def forward(self, annotation_vectors, hidden_state):
+        batch_size = hidden_state.shape[0]
         hidden_state = hidden_state.unsqueeze(1)        # prev_emb is [batch_size, 1, hidden_size]
 
         encodings_lin = self.lin_annotations(annotation_vectors) # encodings is [batch_size, num_ann_vectors, hidden_size]
         hidden_state = self.lin_hidden(hidden_state)     # prev_emb is [batch_size, 1, hidden_size]
         attention_input = torch.tanh(encodings_lin + hidden_state) # attention_input is [batch_size, num_ann_vectors, hidden_size]
         attention_input = self.dropout(attention_input)
-        weights = F.softmax(self.out(attention_input), dim=-1)  # weights is [batch_size, num_ann_vectors]
-        return torch.sum(weights * annotation_vectors, dim=1), weights  # return context vector [batch_size, context_size] and attention_weights
+        weights = F.softmax(self.out(attention_input).view(batch_size, -1), dim=-1)  # weights is [batch_size, num_ann_vectors]
+        weighted_annotations = weights.unsqueeze(-1) * annotation_vectors
+        return torch.sum(weighted_annotations, dim=1), weights  # return context vector [batch_size, context_size] and attention_weights
 
 class AttentionDecoder(Module):
     def __init__(self, context_size, embedding_size, hidden_size, vocabulary, caption_length) -> None:

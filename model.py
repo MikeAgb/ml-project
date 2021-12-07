@@ -1,4 +1,5 @@
 import os
+import random
 
 import torch
 from torch.nn import Module, CrossEntropyLoss
@@ -46,7 +47,7 @@ def train_one_batch(data, model, optimizer, criterion):
 
     return total_loss
 
-def train_one_batch_attention(data, model, optimizer, criterion):
+def train_one_batch_attention(data, model, optimizer, criterion, teacher_forcing_prob=1):
     model.train(True)
     X, captions = data
     X = X.to(DEVICE)
@@ -58,6 +59,10 @@ def train_one_batch_attention(data, model, optimizer, criterion):
 
     hidden_state, cell_state = None, None
     for i in range(1, model.decoder.caption_length):
+        if i == 1 or random.uniform(0, 1) < teacher_forcing_prob:
+            previous_word = captions[:, i-1]
+        else:
+            previous_word = torch.argmax(output, dim=-1)
         previous_word = captions[:, i-1]
         output, _, hidden_state, cell_state = model.decoder(annotations, previous_word, hidden_state, cell_state)
         loss = criterion(output, captions[:, i])
@@ -133,7 +138,7 @@ def inference_attention(model, X, return_weights=False):
     hidden_state, cell_state = None, None
     for i in range(1, model.decoder.caption_length):
         output_prob, attention_weights, hidden_state, cell_state = model.decoder(annotations, output[:, i-1], hidden_state, cell_state)
-        all_attention_weights[:, i, :] = attention_weights.view(batch_size, -1)
+        all_attention_weights[:, i, :] = attention_weights.item()
         output[:, i] = torch.argmax(output_prob, dim=-1)
     if return_weights:
         return output, all_attention_weights
