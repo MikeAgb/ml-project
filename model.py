@@ -122,15 +122,19 @@ def inference(model, X):
         output[:, i] = torch.argmax(output_prob, dim=-1)
     return output
 
-def inference_attention(model, X):
+def inference_attention(model, X, return_weights=False):
     annotations = model.encoder(X)
     batch_size = X.shape[0]
 
     output = torch.zeros((batch_size, model.decoder.caption_length), dtype=torch.long)
     output[:, 0] = model.decoder.vocab["<start>"]
+    all_attention_weights = torch.zeros((batch_size, model.decoder.caption_length, 49))
 
     hidden_state, cell_state = None, None
     for i in range(1, model.decoder.caption_length):
-        output_prob, _, hidden_state, cell_state = model.decoder(annotations, output[:, i-1], hidden_state, cell_state)
+        output_prob, attention_weights, hidden_state, cell_state = model.decoder(annotations, output[:, i-1], hidden_state, cell_state)
+        all_attention_weights[:, i, :] = attention_weights
         output[:, i] = torch.argmax(output_prob, dim=-1)
+    if return_weights:
+        return output, all_attention_weights
     return output
