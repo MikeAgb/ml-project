@@ -2,7 +2,7 @@
 Code to extract features from teh vgg16 model
 """
 
-from torchvision.models import vgg16 #googlenet, 
+from torchvision.models import vgg16, googlenet, inception_v3
 import torchvision.transforms as transforms
 from PIL import Image
 from tqdm import tqdm
@@ -27,6 +27,15 @@ def get_files(file_directory, extension='*.jpg'):
     files = glob.glob(os.path.join(file_directory, extension))
     return files
 
+# Create an Identity layer to replay last fully connected
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+        
+    def forward(self, x):  
+        return x
+
+
 # define our model
 class VGG_extractor(nn.Module):
     def __init__(self):
@@ -44,6 +53,42 @@ class VGG_extractor(nn.Module):
         x = self.fc1(x)
         return x , y
 
+class GoogleNet_extractor(nn.Module):
+    def __init__(self):
+        super(GoogleNet_extractor, self).__init__()
+        self.googlenet = googlenet(pretrained=True)
+        self.googlenet.avgpool = Identity()
+        self.googlenet.dropout = Identity()
+        self.googlenet.fc = Identity()
+        self.avgpool = googlenet(pretrained=True).avgpool
+        self.dropout = googlenet(pretrained=True).dropout 
+        
+    def forward(self, x):
+        """Extract first fully connected feature vector"""
+        x = self.googlenet(x).reshape(1024,7,7)
+        y = x
+        x = self.avgpool(x) 
+        x = self.dropout(x) 
+        return x , y
+
+class Inception_extractor(nn.Module):
+    def __init__(self):
+        super(Inception_extractor, self).__init__()
+        self.incept = inception_v3(pretrained=True)
+        self.incept.avgpool = Identity()
+        self.incept.dropout = Identity()
+        self.incept.fc = Identity()
+        self.avgpool = inception_v3(pretrained=True).avgpool
+        self.dropout = inception_v3(pretrained=True).dropout 
+        
+    def forward(self, x):
+        """Extract first fully connected feature vector"""
+        x = self.incept(x).reshape(2048,5,5)
+        y = x
+        x = self.avgpool(x) 
+        x = self.dropout(x) 
+        return x, y
+
 def get_image(file_path, model):
     image_path = file_path
     image = Image.open(image_path).convert('RGB')
@@ -60,26 +105,70 @@ def get_image(file_path, model):
     return fcrep.detach(), maxpool_rep.detach()
         
 if __name__ == "__main__":
-    if not os.path.exists(os.path.join("dataset", "features")):
-        os.mkdir(os.path.join("dataset", "features"))
-        
-    model = VGG_extractor().eval()
+    if not os.path.exists(os.path.join("dataset", "features_google")):
+        os.mkdir(os.path.join("dataset", "features_google"))
+    if not os.path.exists(os.path.join("dataset", "features_vgg")):
+        os.mkdir(os.path.join("dataset", "features_vgg"))
+    if not os.path.exists(os.path.join("dataset", "features_incept")):
+        os.mkdir(os.path.join("dataset", "features_incept"))
+    
+
+    model_vgg = VGG_extractor().eval() 
+    model_goo = GoogleNet_extractor().eval()
+    model_inc = Inception_extractor().eval() 
     
     for ds in ["train","val", "test"]:
         in_folder = os.path.join("dataset", ds, f'{ds}2017')
-        fc_out_folder = os.path.join("dataset","features", ds, 'fc')
-        mp_out_folder = os.path.join("dataset","features", ds,'mp')
-        if not os.path.exists(os.path.join("dataset","features", ds)):
-            os.mkdir(os.path.join("dataset","features", ds))
-        if not os.path.exists(fc_out_folder):
-            os.mkdir(fc_out_folder)
-        if not os.path.exists(mp_out_folder):
-            os.mkdir(mp_out_folder)
+
+        fc_out_folder_vgg = os.path.join("dataset","features_vgg", ds, 'fc')
+        mp_out_folder_vgg = os.path.join("dataset","features_vgg", ds,'mp')
+
+        fc_out_folder_goo = os.path.join("dataset","features_google", ds, 'fc')
+        mp_out_folder_goo = os.path.join("dataset","features_google", ds,'mp')
+
+        fc_out_folder_inc = os.path.join("dataset","features_incept", ds, 'fc')
+        mp_out_folder_inc = os.path.join("dataset","features_incept", ds,'mp')
+
+        if not os.path.exists(os.path.join("dataset","features_vgg", ds)):
+            os.mkdir(os.path.join("dataset","features_vgg", ds))
+
+        if not os.path.exists(os.path.join("dataset","features_google", ds)):
+            os.mkdir(os.path.join("dataset","features_google", ds))
+        
+        if not os.path.exists(os.path.join("dataset","features_incept", ds)):
+            os.mkdir(os.path.join("dataset","features_incept", ds))
+
+
+        if not os.path.exists(fc_out_folder_vgg):
+            os.mkdir(fc_out_folder_vgg)
+        if not os.path.exists(mp_out_folder_vgg):
+            os.mkdir(mp_out_folder_vgg)
+
+        if not os.path.exists(fc_out_folder_goo):
+            os.mkdir(fc_out_folder_goo)
+        if not os.path.exists(mp_out_folder_goo):
+            os.mkdir(mp_out_folder_goo)
+
+        if not os.path.exists(fc_out_folder_inc):
+            os.mkdir(fc_out_folder_inc)
+        if not os.path.exists(mp_out_folder_inc):
+            os.mkdir(mp_out_folder_inc)
+
+
         print(f"extracting {ds} images.")
         image_paths = get_files(in_folder)
         for image_path in tqdm(image_paths):
-            fc_layer, mp_layer = get_image(image_path, model)
-            fc_filename = os.path.splitext(os.path.basename(image_path))[0] + '.pt'
-            mp_filename = os.path.splitext(os.path.basename(image_path))[0] + '.pt'
-            torch.save(fc_layer, os.path.join(fc_out_folder, fc_filename))
-            torch.save(mp_layer, os.path.join(mp_out_folder, mp_filename))
+            fc_vgg, mp_vgg = get_image(image_path, model_vgg)
+            fc_goo, mp_goo = get_image(image_path, model_goo)
+            fc_inc, mp_inc = get_image(image_path, model_inc)
+    
+            filename = os.path.splitext(os.path.basename(image_path))[0] + '.pt'
+
+            torch.save(fc_vgg, os.path.join(fc_out_folder_vgg, filename))
+            torch.save(mp_vgg, os.path.join(fc_out_folder_vgg, filename))
+
+            torch.save(fc_inc, os.path.join(fc_out_folder_inc, filename))
+            torch.save(mp_inc, os.path.join(fc_out_folder_inc, filename))
+
+            torch.save(fc_goo, os.path.join(fc_out_folder_goo, filename))
+            torch.save(mp_goo, os.path.join(fc_out_folder_goo, filename))

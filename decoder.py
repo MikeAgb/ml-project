@@ -8,6 +8,8 @@ from torch.nn import Module, LSTMCell, Embedding, Linear, Dropout, BatchNorm1d
 import preprocessing
 
 class BasicDecoder(Module):
+    """Decoder for the Baseline model"""
+
     def __init__(self, embedding_size, hidden_size, vocabulary, caption_length) -> None:
         super(BasicDecoder, self).__init__()
 
@@ -36,6 +38,8 @@ class BasicDecoder(Module):
         return output, hidden_state, cell_state
 
 class AttentionModel(Module):
+    """Part of the attention model that calculates the attention weights"""
+
     def __init__(self, input_size, hidden_size) -> None:
         super(AttentionModel, self).__init__()
         self.lin_annotations = Linear(input_size, hidden_size)
@@ -56,6 +60,8 @@ class AttentionModel(Module):
         return torch.sum(weighted_annotations, dim=1), weights  # return context vector [batch_size, context_size] and attention_weights
 
 class AttentionDecoder(Module):
+    """Attention decoder"""
+
     def __init__(self, context_size, embedding_size, hidden_size, vocabulary, caption_length) -> None:
         super(AttentionDecoder, self).__init__()
         self.embedding_size = embedding_size

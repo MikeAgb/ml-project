@@ -13,6 +13,7 @@ IMAGE_WIDTH = 224
 IMAGE_HEIGHT = 224
 
 class CaptionDataset(Dataset):
+    """Builds a dataset directly from the images --- we ended up not actually using this class"""
 
     def __init__(self, image_folder, preprocessed_captions, vocab, max_caption_length=22):
         self.image_folder = image_folder
@@ -63,6 +64,8 @@ class CaptionDataset(Dataset):
 
 
 class EncodedDataset(Dataset):
+    """Builds the dataset from the encoded images"""
+
     def __init__(self, vocab, captions, max_caption_length, train_val_test="train", fc_mp="fc", google=True) -> None:
         super(Dataset, self).__init__()
         self.folder = os.path.join("dataset", "features_google" if google else "features", train_val_test, fc_mp)
@@ -104,10 +107,11 @@ class EncodedDataset(Dataset):
 
 if __name__ == "__main__":
     captions = preprocessing.load_captions(os.path.join("dataset", "annotations", "annotations", "captions_train2017.json"))
-    pre_captions = preprocessing.preprocess_captions(captions, 22)
-    vocab = preprocessing.create_vocabulary(pre_captions)
+    pre_captions = preprocessing.preprocess_captions(captions, 18)
+    vocab = preprocessing.create_vocabulary(pre_captions, min_freq=20)
+    print(len(vocab))
 
-    train_ds = EncodedDataset(vocab, pre_captions, 22, fc_mp="mp", captions_per_image=1)
+    train_ds = EncodedDataset(vocab, pre_captions, 18, fc_mp="mp")
     print(len(train_ds))
 
     im, l = train_ds[0]
