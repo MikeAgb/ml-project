@@ -35,11 +35,12 @@ if __name__ == "__main__":
     train_ds = dataset.EncodedDataset(vocab, train_pre_captions, MAX_CAPTION_LENGTH, "train", "mp", google=False)
     val_ds = dataset.EncodedDataset(vocab, val_pre_captions, MAX_CAPTION_LENGTH, "val", "mp", google=False)
 
-    # Create model
+    # Create model - Baseline
     # encoder_model = encoder.LinearDimensionalityReduction(1024, EMBEDDING_DIM)
     # decoder_model = decoder.BasicDecoder(EMBEDDING_DIM, EMBEDDING_DIM, vocab, MAX_CAPTION_LENGTH)
     # captionning_model = model.CaptionningModel(encoder_model, decoder_model)
 
+    # Create model - Attention
     encoder_model = encoder.EncodeForAttention(512, 256)
     decoder_model = decoder.AttentionDecoder(256, 256, 512, vocab, MAX_CAPTION_LENGTH)
     captionning_model = model.CaptionningModel(encoder_model, decoder_model).to(model.DEVICE)

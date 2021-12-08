@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 
 class LinearDimensionalityReduction(Module):
+    """Encoder for the baseline"""
 
     def __init__(self, input_size, output_size, dropout=0.) -> None:
         super(LinearDimensionalityReduction, self).__init__()
@@ -15,6 +16,8 @@ class LinearDimensionalityReduction(Module):
         return self.dropout(self.linear(pretrained_encoding))
 
 class EncodeForAttention(Module):
+    """Encoder for the attention"""
+
     def __init__(self, in_size, out_size) -> None:
         super(EncodeForAttention, self).__init__()
         self.lin = Linear(in_size, out_size)

@@ -8,6 +8,7 @@ PUNCTUATION = '!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~'
 PUNCTUATION_TRANS = str.maketrans("", "", PUNCTUATION)
 
 def load_captions(path):
+    """loads captions"""
     with open(path, "r") as json_file:
         json_dict = json.load(json_file)
     captions = {}
@@ -19,6 +20,7 @@ def load_captions(path):
     return captions
 
 def preprocess_captions(captions, max_length=22):
+    """Tokenizes captions, adds <start> and <end> tokens, filters out captions with length > max_length"""
     tokenizer = get_tokenizer("basic_english")
     preprocessed_captions = {}
     for image_id in captions:
@@ -32,6 +34,8 @@ def preprocess_captions(captions, max_length=22):
     return preprocessed_captions
 
 def create_vocabulary(tokenized_captions, min_freq=5):
+    """Creates a vocabulary object from the tokenized captions. min_freq controls the minimum number of time a
+    word must appear to be included."""
     all_tokens = []
     for image_id in tokenized_captions:
         for caption in tokenized_captions[image_id]:
@@ -41,6 +45,7 @@ def create_vocabulary(tokenized_captions, min_freq=5):
     return vocab
 
 def rebuild_sentence(model_output, vocabulary):
+    """Rebuilds the sentence from the model output."""
     sentence = ""
     for token in vocabulary.lookup_tokens(model_output.tolist()):
         if token == "<start>" or token == "<null>":

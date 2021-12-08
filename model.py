@@ -23,6 +23,8 @@ class CaptionningModel(Module):
         self.decoder = decoder
 
 def train_one_batch(data, model, optimizer, criterion):
+    """Trains one batch of the baseline model"""
+
     model.train(True)
     X, captions = data  # captions is [batch size, caption_length]
     X = X.to(DEVICE)
@@ -50,6 +52,8 @@ def train_one_batch(data, model, optimizer, criterion):
     return total_loss
 
 def train_one_batch_attention(data, model, optimizer, criterion, teacher_forcing_prob=1):
+    """Trains one batch of the attention model. Can specify teacher_forcing_prob to use curriculum learning."""
+
     model.train(True)
     X, captions = data
     X = X.to(DEVICE)
@@ -76,6 +80,7 @@ def train_one_batch_attention(data, model, optimizer, criterion, teacher_forcing
     return total_loss / (model.decoder.caption_length - 1)
 
 def train_one_epoch(dataloader, model, optimizer, criterion, epoch_num=0):
+    """Trains one epoch of either model. epoch_num is used in curriculum learning."""
     losses = []
     
     for data in tqdm(dataloader, leave=False):
@@ -85,6 +90,7 @@ def train_one_epoch(dataloader, model, optimizer, criterion, epoch_num=0):
     return sum(losses) / len(losses)
 
 def train(train_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.05):
+    """Trains the model."""
     if DO_CURRICULUM and len(CURRICULUM) != num_epochs:
         raise ValueError()
     optimizer = Adam(model.parameters(), lr=lr)
@@ -117,6 +123,7 @@ def train(train_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.0
     return train_loss
 
 def inference(model, X):
+    """Inference for the baseline model."""
     X = model.encoder(X)
     batch_size = X.shape[0]
 
@@ -132,6 +139,7 @@ def inference(model, X):
     return output
 
 def inference_attention(model, X, return_weights=False):
+    """Inference for the attention model. Can optionally return the attention weights for vizualizations."""
     annotations = model.encoder(X)
     batch_size = X.shape[0]
 
