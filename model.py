@@ -118,6 +118,7 @@ def train(train_ds, model, num_epochs=10, batch_size=32, lr=0.01, epoch_perc=0.0
 
         torch.save(model, os.path.join("checkpoints", "check_att{}.pt".format(i+1)))
         print("Epoch {} - Train loss = {:.2f}".format(i + 1, train_loss[i]))
+        # print(preprocessing.rebuild_sentence(inference(model, im.unsqueeze(0))[0], model.decoder.vocab))
         print(preprocessing.rebuild_sentence(inference_attention(model, im.unsqueeze(0))[0], model.decoder.vocab))
         # scheduler.step()
     return train_loss

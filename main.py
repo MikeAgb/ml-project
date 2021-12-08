@@ -36,7 +36,7 @@ if __name__ == "__main__":
     val_ds = dataset.EncodedDataset(vocab, val_pre_captions, MAX_CAPTION_LENGTH, "val", "mp", google=False)
 
     # Create model - Baseline
-    # encoder_model = encoder.LinearDimensionalityReduction(1024, EMBEDDING_DIM)
+    # encoder_model = encoder.LinearDimensionalityReduction(4096, EMBEDDING_DIM)
     # decoder_model = decoder.BasicDecoder(EMBEDDING_DIM, EMBEDDING_DIM, vocab, MAX_CAPTION_LENGTH)
     # captionning_model = model.CaptionningModel(encoder_model, decoder_model)
 
