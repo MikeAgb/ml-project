@@ -104,10 +104,11 @@ class EncodedDataset(Dataset):
 
 if __name__ == "__main__":
     captions = preprocessing.load_captions(os.path.join("dataset", "annotations", "annotations", "captions_train2017.json"))
-    pre_captions = preprocessing.preprocess_captions(captions, 22)
-    vocab = preprocessing.create_vocabulary(pre_captions)
+    pre_captions = preprocessing.preprocess_captions(captions, 18)
+    vocab = preprocessing.create_vocabulary(pre_captions, min_freq=20)
+    print(len(vocab))
 
-    train_ds = EncodedDataset(vocab, pre_captions, 22, fc_mp="mp", captions_per_image=1)
+    train_ds = EncodedDataset(vocab, pre_captions, 18, fc_mp="mp")
     print(len(train_ds))
 
     im, l = train_ds[0]
