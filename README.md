@@ -1,5 +1,10 @@
 # ml-project
 
+This project was completed in the context of a PHD machine learning class at Carnegie Mellon University by Michael Agaby, olivier Filion, and Nicholas Amano. We implement a CNN-LSTM architecture with a visual attention mechanism which achieves a 23.9 BLEU-4 score on the MS COCO dataset using curriculum learning. We interpret the CNN encoder through visualizations and show that the model is able to automatically learn to look at the most important elements of the image when generating captions.
+
+## Running the project
+
+
 Important scripts: run main.py to train the model, the python notebook contains the data exploration and the vizualizations, evaluation.py calculates BLEU-score.
 
 ----------------
