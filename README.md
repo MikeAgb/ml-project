@@ -38,3 +38,4 @@ To run the baseline model,
     in model.py: uncomment lines 87 and 121 in model.py and comment out lines 88 and 122.
 
 Note that the main.py script needs the output of feature_extraction.py to be saved on the disk with the correct directory structure.
+
